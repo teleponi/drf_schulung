@@ -27,7 +27,15 @@ class CategorySerializer(serializers.ModelSerializer):
 class EventSerializer(serializers.ModelSerializer):
     """Einfacher Serializer für das Event Model."""
 
+    # category = serializers.StringRelatedField()
+
+
     class Meta:
         model = models.Event
         fields = "__all__"  # alle Felder!
         # fields = ["name", "sub_title"]
+    
+    def to_representation(self, instance):
+        repr = super().to_representation(instance)
+        repr["category_name"] = instance.category.name
+        return repr
