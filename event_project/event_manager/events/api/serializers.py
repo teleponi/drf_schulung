@@ -4,8 +4,17 @@ import re
 from events import models 
 
 
+class EventInlineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Event
+        fields = ["id", "name"]
+
+
 class CategorySerializer(serializers.ModelSerializer):
     """Einfacher Serializer für das Category Model."""
+
+    # nested Serializer (events muss als related_name im Event-Model angegeben sein!)
+    events = EventInlineSerializer(many=True, read_only=True)
 
     class Meta:
         model = models.Category
@@ -33,7 +42,17 @@ class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Event
         fields = "__all__"  # alle Felder!
-        # fields = ["name", "sub_title"]
+
+        extra_kwargs = {
+            'description': {'max_length': 10, 'error_messages': {'max_length': 'Description is too long.'}},
+        }
+    
+    def validate(self, data):
+        """Cross Field Validation"""
+        if data["is_active"] and data["category"].name == "Sports":
+            raise serializers.ValidationError("Sport kann nicht aktiv sein!")
+
+        return data
     
     def to_representation(self, instance):
         repr = super().to_representation(instance)

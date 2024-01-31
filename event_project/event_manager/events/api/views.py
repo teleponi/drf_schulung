@@ -6,20 +6,56 @@ Update, Delete, Get => ID
 
 """
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics
+from rest_framework.filters import OrderingFilter, SearchFilter
+
+from rest_framework.authentication  import SessionAuthentication
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
 from .serializers import EventSerializer, CategorySerializer
+from .permissions import IsAdminOrReadOnly
 from events.models import Category, Event, ErrorLog
 
 
 # generische VIEWS:
 class EventListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = EventSerializer
-    queryset = Event.objects.all()
+    queryset = Event.objects.prefetch_related("category")
+    filter_backends = [OrderingFilter, SearchFilter]
+    # authentication_classes = [SessionAuthentication]
+    # permission_classes = [IsAdminOrReadOnly]
+
+    # http://127.0.0.1:8000/api/event/?ordering=category__name&name=history
+    ordering_fields = ["name", "min_group", "category__name"]
+
+    # http://127.0.0.1:8000/api/event/?ordering=name&search=xyz
+    # search_fields = ["name", "category__name"]
+    search_fields = ["=category__name"]  # exakte Suche
+
+    # Modus Dach: search_fields = ["^name"]  # Muss mit Suchwort stasrten
+    # Modus Regex: search_fields = ["$name"] # Regex-Suche für User ermöglichen
+    # Exakter match. search_fields = ["=name"]
+
+    def get_queryset(self):
+        # hole erstmal das definierte Queryset
+        qs = super().get_queryset()
+        
+        # wenn ?name=XY&author=thomas, dann filtere Queryset
+        anfrage = self.request.GET.get("name")
+        if anfrage:
+            qs = qs.filter(name__contains=anfrage)
+        return qs
+
+    # @method_decorator(cache_page(60 * 2))  # 2 Minuten caching
+    def get(self, *args, **kwargs):
+        print(self.request.GET.get("name"))
+        return super().get(*args, **kwargs)
 
 
 class EventRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -30,6 +66,8 @@ class EventRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
 class CategoryListCreateView(generics.ListCreateAPIView):
     serializer_class = CategorySerializer
     queryset = Event.objects.all()
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAdminOrReadOnly]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

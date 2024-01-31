@@ -10,22 +10,31 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import environ
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+# Umgebungsvarialben aus .env lesen. 
+# default values
+env = environ.Env(
+    DEBUG=(bool, True),
+)
+environ.Env.read_env(BASE_DIR / ".env")
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ap1=6osol6f9$=-w87r!5$ojr@8r=izt0bw^_^^mp&f)h5v_^$'
+SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env("DEBUG")
 
-ALLOWED_HOSTS = ["localhost", "*"]  # example.com
+# mache eine Liste aus "ALLOWED_HOSTS". Benötigt eine kommaseparierte liste in .env
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")  # ["localhost", "*"]  # example.com
 
 
 # Application definition
@@ -38,8 +47,20 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
+    "drf_spectacular",
+    'drf_spectacular_sidecar',
+    'django_extensions',
     'events',
 ]
+
+if DEBUG:
+    INSTALLED_APPS.extend(
+        ["debug_toolbar"]
+    )
+
+    INTERNAL_IPS = ("127.0.0.1",)  # Docker: ID Container
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -50,6 +71,10 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+
+if DEBUG:
+    MIDDLEWARE.extend(["debug_toolbar.middleware.DebugToolbarMiddleware"])
 
 ROOT_URLCONF = 'event_manager.urls'
 
@@ -80,6 +105,30 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
+}
+
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "events.api.permissions.IsAdminOrReadOnly",
+    ]
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Event Manager API',
+    'DESCRIPTION': 'Django Event manager',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    # 'SERVE_AUTHENTICATION': ['rest_framework.authentication.SessionAuthentication'],
+    # 'SERVE_PERMISSIONS': ['rest_framework.permissions.IsAuthenticated'],
+
+    # OTHER SETTINGS
 }
 
 

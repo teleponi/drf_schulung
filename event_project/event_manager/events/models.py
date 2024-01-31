@@ -1,4 +1,7 @@
 from django.db import models
+from django.core.validators import MinLengthValidator
+
+from .validators import contains_xy
 
 
 class ErrorLog(models.Model):
@@ -22,13 +25,17 @@ class Category(models.Model):
     # immer, wenn Datensatz geändert wird, wird updated_at auf den Zeitstempel gesetzt
     updated_at = models.DateTimeField(auto_now=True) 
 
-    name = models.CharField(max_length=100)  # mandatory, VARCHAR 100
+    name = models.CharField(max_length=100, 
+                            validators=[MinLengthValidator(3)]
+                            )  # mandatory, VARCHAR 100
     # null=True => darf in der DB NULL sein
     # blank=True => darf im Formular leer sein
     sub_title = models.CharField(max_length=100, null=True, blank=True)
 
     # mehrzeiliges Eingabefeld
-    description = models.TextField(null=True, blank=True)
+    description = models.TextField(null=True, 
+                                   blank=True, 
+                                   validators=[contains_xy])
 
     def __str__(self) -> str:
         """String Repräsentation einer Python Classe. Die Kategorie soll
@@ -51,8 +58,10 @@ class Event(models.Model):
     min_group = models.IntegerField(choices=MinGroup.choices)
     category = models.ForeignKey(
         Category,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name="events"
     )
+    
     is_active = models.BooleanField(default=True)
      
 

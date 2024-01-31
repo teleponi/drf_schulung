@@ -15,6 +15,7 @@ class ErrorLogAdmin(admin.ModelAdmin):
         d = json.loads(json_snippet, strict=False)
         return d.get("name", None)
 
+
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ["id", "name", "sub_title"]  # liste von Feldern in der Übersicht

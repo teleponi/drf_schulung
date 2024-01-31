@@ -1,2 +1,6 @@
 django==4.2.9
 djangorestframework
+drf-spectacular-sidecar
+drf-spectacular
+django-environ
+django-extensions
